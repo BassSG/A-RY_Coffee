@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="th"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>A-RY Coffee POS</title>
+<?!= include('Style') ?>
+</head><body>
+<header>
+  <div class="brand"><div class="logo" aria-hidden="true">☕</div><div><div class="brand-name">A-RY COFFEE</div><div class="brand-sub">YOUR DAILY COFFEE</div></div></div>
+  <nav class="nav" aria-label="เมนูหลัก">
+    <button id="tabSale" class="active" onclick="tab('sale')"><span class="ic">☕</span>ขายหน้าร้าน</button>
+    <button id="tabReport" onclick="tab('report')"><span class="ic">📊</span>สรุปยอด</button>
+    <button id="tabSettings" onclick="tab('settings')"><span class="ic">⚙️</span>ตั้งค่า</button>
+  </nav>
+</header>
+<main class="shell">
+<div id="setupWarning" class="notice hidden"></div>
+<div id="pendingNotice" class="notice hidden">มีบิลที่ยังยืนยันไม่ได้ว่าบันทึกแล้วหรือยัง กดปุ่มส่งบิลเดิมอีกครั้ง ระบบจะไม่บันทึกซ้ำ</div>
+
+<section id="sale">
+  <div id="todayBar" class="today hidden"><span class="t-label">วันนี้</span><span class="t-item"><b id="tdRev">฿0</b> ยอดขาย</span><span class="t-item"><b id="tdCups">0</b> แก้ว</span><span class="t-item"><b id="tdOrders">0</b> บิล</span></div>
+  <div class="layout">
+    <div class="panel products-panel">
+      <div class="menu-tools"><div class="menu-heading">เลือกเมนู <span class="hint">แตะเพื่อเพิ่ม · กด − เพื่อลด</span></div><input id="search" class="search" type="search" placeholder="🔍 ค้นหาเมนู" oninput="renderMenu()" aria-label="ค้นหาเมนู"></div>
+      <div id="chips" class="chips"></div>
+      <div id="menu" class="grid"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+    <aside id="cartBox" class="panel cart" aria-label="รายการในบิล">
+      <div class="cart-head"><div><h2>บิลปัจจุบัน</h2><div id="saveStatus" class="hint"></div></div><div class="cart-head-right"><span id="cupCount" class="count">0 แก้ว</span><button class="cart-close" onclick="toggleCart(false)" aria-label="ปิด">✕</button></div></div>
+      <div id="cart" class="cart-items"></div>
+      <div class="foot"><div class="total"><span>รวมทั้งหมด</span><b id="total">฿0</b></div><button id="checkout" class="primary" onclick="checkout()">บันทึกบิล</button></div>
+    </aside>
+  </div>
+</section>
+
+<section id="reportPage" class="hidden">
+  <h1 class="page-title">สรุปยอดขาย</h1>
+  <p class="sub">ดูว่าขายได้เท่าไหร่ และเมนูไหนขายดี จะได้เตรียมของถูก</p>
+  <div class="presets">
+    <button class="chip" id="pToday" onclick="preset('today')">วันนี้</button>
+    <button class="chip" id="pYesterday" onclick="preset('yesterday')">เมื่อวาน</button>
+    <button class="chip" id="p7" onclick="preset('7')">7 วันล่าสุด</button>
+    <button class="chip" id="p30" onclick="preset('30')">30 วันล่าสุด</button>
+    <button class="chip" id="pMonth" onclick="preset('month')">เดือนนี้</button>
+  </div>
+  <div class="report-controls">
+    <label class="field">ตั้งแต่<input id="from" type="date"></label>
+    <label class="field">ถึง<input id="to" type="date"></label>
+    <button class="secondary" onclick="loadReport()">ดูรายงาน</button>
+  </div>
+  <div id="reportMessage" class="hint"></div>
+  <div id="reportContent" class="hidden">
+    <div class="stats">
+      <div class="stat"><div class="l">ยอดขายรวม</div><div class="n" id="rRevenue">฿0</div></div>
+      <div class="stat"><div class="l">จำนวนแก้ว</div><div class="n" id="rCups">0</div></div>
+      <div class="stat"><div class="l">จำนวนบิล</div><div class="n" id="rOrders">0</div></div>
+      <div class="stat"><div class="l">เฉลี่ยต่อบิล</div><div class="n" id="rAverage">฿0</div></div>
+    </div>
+    <div class="report-grid">
+      <div class="panel section"><h2>รายรับแต่ละวัน</h2><div id="chartNote" class="hint"></div><div id="chart" class="chart"></div></div>
+      <div class="panel section"><h2>🔥 เมนูขายดี</h2><div class="hint">เรียงจากขายได้มากไปน้อย ใช้ดูว่าควรเตรียมของอะไรเยอะ</div><div id="ranking"></div></div>
+    </div>
+    <div class="panel section" style="margin-top:16px"><h2>รายการขายล่าสุด</h2><div id="orders"></div></div>
+  </div>
+</section>
+
+<section id="settingsPage" class="hidden">
+  <h1 class="page-title">ตั้งค่า</h1>
+  <p class="sub">มี 3 อย่าง: จัดการเมนู · รหัส PIN ยกเลิกบิล · อีเมลสรุปยอด</p>
+  <div class="panel setcard">
+    <h2>🍹 เมนูและราคา</h2>
+    <div class="why">เพิ่มเมนูใหม่ แก้ราคา เปลี่ยนรูป หรือซ่อนเมนูที่เลิกขาย ยอดขายเก่าจะไม่หาย</div>
+    <button class="primary" style="width:auto;justify-self:start;padding:12px 22px" onclick="openMenuEdit('')">＋ เพิ่มเมนูใหม่</button>
+    <div id="mlist" class="mlist"></div>
+  </div>
+  <div class="panel setcard">
+    <h2>🔒 รหัส PIN สำหรับยกเลิกบิล</h2>
+    <div class="why">ถ้ากดบิลผิด จะยกเลิกบิลได้ต้องใส่ PIN (ตัวเลข 4–12 หลัก) กันพนักงานหรือคนอื่นกดยกเลิกเอง ถ้ายังไม่เคยยกเลิกบิลก็ยังไม่ต้องตั้ง</div>
+    <div><span id="pinStatus" class="status no">ยังไม่ได้ตั้ง PIN</span></div>
+    <button class="secondary" style="justify-self:start" onclick="openSettings()">ตั้ง / เปลี่ยน PIN</button>
+  </div>
+  <div class="panel setcard">
+    <h2>✉️ อีเมลสรุปยอดประจำวัน</h2>
+    <div class="why">ระบบส่งสรุปยอดขายของวันให้ทางอีเมลเองทุกวันประมาณ 13:00 น. ไม่ต้องทำอะไร</div>
+    <div id="mailStatus" class="hint"></div>
+  </div>
+</section>
+</main>
+
+<div id="cartOverlay" class="cart-overlay" onclick="toggleCart(false)"></div>
+<div id="cartPreview" class="cart-preview"><div class="preview-total"><span id="previewCount">0 แก้ว</span><b id="previewTotal">฿0</b></div><button class="primary preview-btn" onclick="toggleCart(true)"><span id="previewAction">ดูรายการ</span> &nbsp;→</button></div>
+
+<div id="settingsModal" class="modal hidden"><div class="dialog"><h2>ตั้ง PIN ยกเลิกบิล</h2><p id="settingsInfo" class="hint"></p>
+  <div id="currentPinWrap"><label for="currentPin">PIN เดิม</label><input id="currentPin" type="password" inputmode="numeric" maxlength="12"></div>
+  <label for="newPin">PIN ใหม่ 4–12 หลัก</label><input id="newPin" type="password" inputmode="numeric" maxlength="12">
+  <label for="confirmPin">ยืนยัน PIN ใหม่</label><input id="confirmPin" type="password" inputmode="numeric" maxlength="12">
+  <div class="dialog-actions"><button class="secondary" onclick="closeSettings()">กลับ</button><button id="savePin" class="primary" onclick="saveSettings()">บันทึก PIN</button></div></div></div>
+
+<div id="voidModal" class="modal hidden"><div class="dialog"><h2>ยกเลิกบิล</h2><p class="hint">ยอดบิลนี้จะถูกตัดออกจากรายงาน และเก็บประวัติการยกเลิกไว้</p>
+  <label for="reason">เหตุผล</label><input id="reason" maxlength="200" placeholder="เช่น กดซ้ำ">
+  <label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="12">
+  <div class="dialog-actions"><button class="secondary" onclick="closeVoid()">กลับ</button><button id="voidConfirm" class="primary" onclick="confirmVoid()">ยืนยันยกเลิก</button></div></div></div>
+
+<div id="menuModal" class="modal hidden"><div class="dialog"><h2 id="mTitle">เพิ่มเมนูใหม่</h2>
+  <label for="mName">ชื่อเมนู</label><input id="mName" maxlength="60" placeholder="เช่น น้ำมะพร้าว">
+  <label for="mPrice">ราคา (บาท)</label><input id="mPrice" type="number" inputmode="decimal" min="0" step="1" placeholder="เช่น 40">
+  <label for="mCat">หมวด</label><input id="mCat" maxlength="40" list="catList" placeholder="เช่น เครื่องดื่มอื่น ๆ"><datalist id="catList"></datalist>
+  <label>รูปเมนู</label>
+  <div class="photo-row"><div id="mPrev" class="photo-prev"></div>
+    <div style="display:grid;gap:8px;flex:1"><button class="secondary" onclick="document.getElementById('mFile').click()">📷 ถ่าย / เลือกรูป</button><button id="mClear" class="secondary" onclick="clearPhoto()">ใช้ภาพวาดแทน</button></div></div>
+  <input id="mFile" type="file" accept="image/*" class="hidden" onchange="pickPhoto(this)">
+  <label>ภาพวาดแทนรูป (ถ้าไม่มีรูปถ่าย)</label><div id="mArt" class="art-pick"></div>
+  <div class="dialog-actions"><button class="secondary" onclick="closeMenuEdit()">ยกเลิก</button><button id="mSave" class="primary" onclick="saveMenu()">บันทึกเมนู</button></div></div></div>
+
+<div id="saving" class="saving" data-s="load" role="status" aria-live="polite"><div class="saving-card">
+  <div class="anim">
+    <svg class="cup" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="cupClip"><path d="M30 26h60l-8 78a8 8 0 0 1-8 7H46a8 8 0 0 1-8-7z"/></clipPath></defs><path d="M30 26h60l-8 78a8 8 0 0 1-8 7H46a8 8 0 0 1-8-7z" fill="#fff" stroke="#cfc3ae" stroke-width="4"/><g clip-path="url(#cupClip)"><rect class="fill" x="20" y="26" width="80" height="90" fill="#6b3f22"/><rect class="foam" x="20" y="26" width="80" height="9" fill="#e9c79b"/></g></svg>
+    <svg class="tick" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="46" fill="#2f6a4a"/><path d="M38 62l16 16 30-34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="cross" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="46" fill="#d6493d"/><path d="M42 42l36 36M78 42L42 78" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/></svg>
+  </div>
+  <div id="saveTitle" class="s-title">กำลังบันทึกบิล…</div><div id="saveSub" class="s-sub"></div>
+  <button class="secondary s-close" onclick="hideSaving()">ปิด</button>
+</div></div>
+
+<div id="toast" class="toast hidden" role="status"></div>
+<?!= include('Art') ?>
+<?!= include('Script') ?>
+</body></html>

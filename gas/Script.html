@@ -1,0 +1,166 @@
+<script>
+let catalog=[],category='ทั้งหมด',cart=[],pending=null,busy=false,today='',voidId='',reportOrders=[],pinConfigured=false,summaryEmail='',reportSeq=0,editId='',editImage='',editArt='americano',tilesById={};
+const $=id=>document.getElementById(id),
+esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+baht=n=>'฿'+Number(n||0).toLocaleString('th-TH',{maximumFractionDigits:2}),
+error=e=>e&&e.message?e.message:String(e),key='ary-pos-pending-v2';
+const ARTS={americano:['#e8dcc8','#2b1a10','#4a2f1d',''],espresso:['#efe1cf','#1d0f08','#c98b4f','small'],cappuccino:['#f3e6d4','#c58b57','#fff6e8',''],mocha:['#ead6cc','#5a3223','#f2dccb','choc'],latte:['#f5ead9','#d9b48a','#fff3e2',''],cocoa:['#f0dccf','#6b3a28','#f5e1d0','choc'],thai:['#fde3c4','#e07a2f','#fff0dc',''],green:['#dcebd2','#6f9a46','#f1f7e6',''],honey:['#fbe9b8','#2b1a10','#f2b632','drip'],coconut:['#e2efe9','#2b1a10','#f4f4ee','coco'],coconutlatte:['#e6f1ee','#d9b48a','#fbfbf6','coco'],orange:['#ffe1bd','#3a2216','#f58a1f','slice'],caramel:['#f7e0bd','#c98a4a','#fff2da','drip2'],esthai:['#fcdcb8','#e07a2f','#2b1a10','shot'],esgreen:['#d6e8c8','#6f9a46','#2b1a10','shot'],coconutwater:['#dff3ef','#f4f1e4','#bfe5db','coco'],juice:['#ffe6c2','#f59a2f','#ffd37a','slice'],soda:['#d9ecf7','#6bb7e6','#d6f0ff','bubbles'],milk:['#eef3f7','#fbfbfb','#e5ecf2','']};
+const ART_NAMES={americano:'อเมริกาโน่',espresso:'เอสเพรสโซ่',cappuccino:'คาปูชิโน่',mocha:'มอคค่า',latte:'ลาเต้',cocoa:'โกโก้',thai:'ชาไทย',green:'ชาเขียว',honey:'น้ำผึ้ง',coconut:'มะพร้าว',coconutlatte:'ลาเต้มะพร้าว',orange:'ส้ม',caramel:'คาราเมล',esthai:'เอส-ชาไทย',esgreen:'เอส-ชาเขียว',coconutwater:'น้ำมะพร้าว',juice:'น้ำผลไม้',soda:'โซดา',milk:'นม'};
+function artSvg(k){const a=ARTS[k]||ARTS.americano,bg=a[0],liq=a[1],top=a[2],ex=a[3];let x='';
+ if(ex==='coco'){x+=`<ellipse cx="150" cy="215" rx="42" ry="26" fill="#6b4a2f"/><ellipse cx="150" cy="208" rx="36" ry="20" fill="#fff"/><circle cx="195" cy="205" r="9" fill="#6b4a2f"/>`}
+ if(ex==='slice'){x+=`<circle cx="52" cy="200" r="30" fill="#f58a1f"/><circle cx="52" cy="200" r="23" fill="#ffc15e"/><path d="M52 177v46M29 200h46M36 184l32 32M68 184l-32 32" stroke="#f58a1f" stroke-width="2"/>`}
+ if(ex==='bubbles'){x+=`<circle cx="112" cy="105" r="6" fill="#fff9"/><circle cx="135" cy="130" r="5" fill="#fff9"/><circle cx="118" cy="150" r="4" fill="#fff9"/>`}
+ const h=ex==='small'||ex==='shot'?0:1;
+ const cup=ex==='small'?`<path d="M85 120h90l-8 80a10 10 0 0 1-10 9h-54a10 10 0 0 1-10-9z" fill="#fff"/><path d="M88 135h84l-6 62h-72z" fill="${liq}"/><path d="M88 135h84l-1 10h-82z" fill="${top}"/><path d="M175 135c24 0 24 38 0 38" fill="none" stroke="#fff" stroke-width="9"/>`
+ :`<path d="M95 62h110l-14 150a12 12 0 0 1-12 11h-58a12 12 0 0 1-12-11z" fill="#ffffffcc" stroke="#cfc3ae" stroke-width="3"/><path d="M100 100h100l-11 108h-78z" fill="${liq}"/><path d="M100 100h100l-1 22h-98z" fill="${top}"/>${ex==='shot'?`<path d="M104 150h92l-4 50h-84z" fill="${top}"/>`:''}<rect x="136" y="30" width="9" height="110" rx="4" fill="#ff8a3d" transform="rotate(8 140 80)"/>`;
+ let o='';if(ex==='drip'){o=`<path d="M105 100h90v24c-8 14-14-2-22 14s-14 4-22 18-16-6-24 10-22-20-22-18z" fill="${top}"/>`}
+ if(ex==='drip2'){o=`<path d="M104 112c12 10 24-6 36 6s24-8 36 4 18-4 24 4" fill="none" stroke="#b6661e" stroke-width="7" stroke-linecap="round"/>`}
+ if(ex==='choc'){o=`<circle cx="130" cy="108" r="3" fill="#3b1e12"/><circle cx="152" cy="112" r="3" fill="#3b1e12"/><circle cx="173" cy="107" r="3" fill="#3b1e12"/>`}
+ return `<svg viewBox="0 0 300 276" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="300" height="276" fill="${bg}"/><ellipse cx="150" cy="238" rx="78" ry="10" fill="#0000001a"/>${x}${cup}${o}</svg>`}
+function photoSrc(m){return m.image||PHOTO_URL[m.art]||PHOTOS[m.art]||''}
+function artHtml(m){const s=photoSrc(m);return s?`<img src="${s}" data-k="${esc(m.art||'')}" alt="" decoding="async">`:artSvg(m.art)}
+function call(name,args,ok,fail){const r=google.script.run.withSuccessHandler(ok).withFailureHandler(fail||function(e){toast(error(e))});r[name].apply(r,args)}
+function toast(s){const t=$('toast');t.textContent=s;t.classList.remove('hidden');clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.add('hidden'),3500)}
+function buzz(){try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}}
+function activeMenu(){return catalog.filter(m=>m.active)}
+function init(){buildPhotos();try{pending=JSON.parse(localStorage.getItem(key)||'null')}catch(e){pending=null}
+ call('bootstrap',[],d=>{catalog=d.menu;today=d.today;pinConfigured=d.pinConfigured;summaryEmail=d.summaryEmail||'';
+  if(d.warning){$('setupWarning').textContent=d.warning;$('setupWarning').classList.remove('hidden')}
+  $('from').value=today;$('to').value=today;renderMenu();renderCart();refreshTodayStats()},
+ e=>{$('menu').innerHTML='<div class="empty menu-empty">โหลดไม่ได้: '+esc(error(e))+'<br>ลองรีเฟรชหน้า</div>'})}
+function tab(t){document.body.classList.remove('cart-open');
+ $('cartPreview').classList.toggle('hidden',t!=='sale');
+ ['sale','reportPage','settingsPage'].forEach(id=>$(id).classList.add('hidden'));
+ $(t==='sale'?'sale':t==='report'?'reportPage':'settingsPage').classList.remove('hidden');
+ $('tabSale').classList.toggle('active',t==='sale');$('tabReport').classList.toggle('active',t==='report');$('tabSettings').classList.toggle('active',t==='settings');
+ if(t==='report'){refreshToday();loadReport()}if(t==='settings')renderSettings();window.scrollTo(0,0)}
+/* ---------- sale ---------- */
+function cats(){return['ทั้งหมด',...new Set(activeMenu().map(m=>m.category))]}
+function qtyOf(id){let n=0;for(const x of cart)if(x.id===id)n+=x.qty;return n}
+function renderMenu(){const cs=cats();if(!cs.includes(category))category='ทั้งหมด';
+ $('chips').innerHTML=cs.map((x,i)=>`<button class="chip ${x===category?'on':''}" data-c="${i}">${esc(x)}</button>`).join('');
+ const q=$('search').value.trim().toLowerCase();
+ const list=activeMenu().filter(m=>(category==='ทั้งหมด'||m.category===category)&&m.name.toLowerCase().includes(q));
+ $('menu').innerHTML=list.map(m=>{const n=qtyOf(m.id);return `<div class="product ${n?'sel':''}" data-id="${esc(m.id)}" role="button" tabindex="0" aria-label="${esc(m.name)} ${m.price} บาท"><span class="product-art">${artHtml(m)}</span><span class="product-name">${esc(m.name)}</span><span class="product-bottom"><span class="price">${baht(m.price)}</span><span class="add-icon" aria-hidden="true">＋</span></span><span class="badge">${n}</span><button class="minus" data-minus="${esc(m.id)}" aria-label="ลด ${esc(m.name)}">−</button></div>`}).join('')
+  +`<button class="product addtile" onclick="openMenuEdit('')"><span class="plus">＋</span><b>เพิ่มเมนูใหม่</b></button>`;
+ if(!list.length)$('menu').insertAdjacentHTML('afterbegin','<div class="empty menu-empty">ไม่พบเมนูที่ค้นหา</div>')}
+function paintTile(id,bump){const el=$('menu').querySelector('.product[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');if(!el)return;const n=qtyOf(id);el.classList.toggle('sel',n>0);const b=el.querySelector('.badge');b.textContent=n;if(bump&&b.animate)b.animate([{transform:'scale(.5)'},{transform:'scale(1.3)',offset:.6},{transform:'scale(1)'}],{duration:220,easing:'ease-out'})}
+$('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;category=cats()[+b.dataset.c];renderMenu()});
+$('menu').addEventListener('click',e=>{const mn=e.target.closest('[data-minus]');if(mn){e.stopPropagation();dec(mn.dataset.minus);return}const p=e.target.closest('.product[data-id]');if(p)add(p.dataset.id,p)});
+$('menu').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.product[data-id]')){e.preventDefault();add(e.target.dataset.id)}});
+function add(id,el){if(pending||busy){toast('มีบิลรอยืนยัน กดส่งบิลเดิมก่อน');return}const m=catalog.find(x=>x.id===id&&x.active);if(!m)return;
+ const x=cart.find(x=>x.id===id&&x.sweetness==='ปกติ'&&!x.note);if(x)x.qty++;else cart.push({id:m.id,name:m.name,price:m.price,qty:1,sweetness:'ปกติ',note:''});
+ buzz();paintTile(id,true);renderCart(true);if(el)fly(el,m)}
+function dec(id){if(pending||busy)return;for(let i=cart.length-1;i>=0;i--)if(cart[i].id===id){cart[i].qty--;if(cart[i].qty<=0)cart.splice(i,1);break}paintTile(id,true);renderCart(true)}
+function changeQty(i,n){if(pending||busy)return;const id=cart[i].id;cart[i].qty+=n;if(cart[i].qty<=0)cart.splice(i,1);paintTile(id,true);renderCart(true)}
+function splitItem(i){if(pending||busy||cart[i].qty<2)return;cart[i].qty--;cart.splice(i+1,0,{...cart[i],qty:1});renderCart(true)}
+function setItem(i,k,v){if(pending||busy)return;cart[i][k]=v}
+function renderCart(keepFocus){const locked=!!pending||busy,display=pending?pending.items:cart;
+ const cups=display.reduce((a,x)=>a+x.qty,0),total=display.reduce((a,x)=>a+x.price*x.qty,0);
+ setCups(cups);setMoney($('total'),total);setMoney($('previewTotal'),total);
+ $('previewAction').textContent=pending?'บิลรอส่ง':'ดูรายการ';$('pendingNotice').classList.toggle('hidden',!pending||busy);
+ $('checkout').disabled=busy||(!pending&&!cart.length);
+ $('checkout').textContent=busy?'กำลังบันทึก…':pending?'ตรวจสอบ / ส่งบิลเดิมอีกครั้ง':'บันทึกบิล';
+ $('cart').innerHTML=display.length?display.map((x,i)=>`<div class="item"><div class="item-top"><span class="item-name">${esc(x.name)}</span><b>${baht(x.price*x.qty)}</b></div><div class="item-controls"><select aria-label="ความหวาน ${esc(x.name)}" onchange="setItem(${i},'sweetness',this.value)" ${locked?'disabled':''}>${['ปกติ','ไม่หวาน','หวานน้อย','หวานมาก'].map(s=>`<option ${s===x.sweetness?'selected':''}>${s}</option>`).join('')}</select><div class="qty"><button class="smallbtn" onclick="changeQty(${i},-1)" ${locked?'disabled':''} aria-label="ลด">−</button><b>${x.qty}</b><button class="smallbtn" onclick="changeQty(${i},1)" ${locked?'disabled':''} aria-label="เพิ่ม">＋</button></div></div>${x.qty>1&&!locked?`<button class="split" style="background:none;color:#2f6a4a;font-size:.8rem;padding:6px 0;text-decoration:underline" onclick="splitItem(${i})">แยก 1 แก้ว เพื่อตั้งค่าแก้วนี้ต่างหาก</button>`:''}<input placeholder="หมายเหตุ เช่น ไม่ใส่นม" maxlength="100" value="${esc(x.note)}" onchange="setItem(${i},'note',this.value)" ${locked?'disabled':''}></div>`).join(''):'<div class="empty">ยังไม่มีรายการ<br><small>แตะเมนูเพื่อเพิ่มลงบิล</small></div>'}
+function uid(){if(crypto.randomUUID)return crypto.randomUUID();const a=new Uint8Array(16);crypto.getRandomValues(a);return Array.from(a,x=>x.toString(16).padStart(2,'0')).join('')}
+function checkout(){if(busy)return;
+ if(!pending){if(!cart.length)return;pending={id:uid(),items:cart.map(x=>({...x})),note:''};
+  try{localStorage.setItem(key,JSON.stringify(pending))}catch(e){pending=null;toast('อุปกรณ์ไม่อนุญาตให้บันทึกข้อมูลชั่วคราว จึงยังบันทึกบิลไม่ได้');return}}
+ const sentCups=pending.items.reduce((a,x)=>a+x.qty,0);busy=true;renderCart();$('saveStatus').textContent='กำลังบันทึก กรุณารอสักครู่';showSaving('load','กำลังบันทึกบิล…','รอสักครู่ ยังไม่ต้องปิดหน้านี้');
+ const done=()=>{pending=null;try{localStorage.removeItem(key)}catch(e){}cart=[];renderMenu();renderCart();toggleCart(false)};
+ call('saveOrder',[pending],r=>{busy=false;
+  if(r.rejected){done();$('saveStatus').textContent='บิลไม่ถูกบันทึก: '+r.message;showSaving('err','บิลไม่ถูกบันทึก',r.message);return}
+  done();$('saveStatus').textContent='บันทึกแล้ว '+baht(r.total);if(r.status==='VOID'){showSaving('err','บิลนี้ถูกยกเลิกไปแล้ว','')}else{showSaving('ok','บันทึกแล้ว!',baht(r.total)+' · '+sentCups+' แก้ว');if(!r.duplicate)addToday(r.total,sentCups)}},
+ e=>{busy=false;renderCart();$('saveStatus').textContent='ยังยืนยันผลไม่ได้: '+error(e)+' กรุณากดส่งบิลเดิมอีกครั้ง';showSaving('err','ยังยืนยันผลไม่ได้','เน็ตอาจหลุด กดปุ่ม “ส่งบิลเดิมอีกครั้ง” ได้เลย ระบบจะไม่บันทึกซ้ำ')})}
+function toggleCart(open){document.body.classList.toggle('cart-open',typeof open==='boolean'?open:!document.body.classList.contains('cart-open'))}
+/* ---------- report ---------- */
+function bkk(d){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);return p}
+function refreshToday(){today=bkk(new Date())}
+function shift(days){const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
+function preset(p){refreshToday();let f=today,t=today;if(p==='yesterday'){f=t=shift(-1)}else if(p==='7'){f=shift(-6)}else if(p==='30'){f=shift(-29)}else if(p==='month'){f=today.slice(0,8)+'01'}
+ $('from').value=f;$('to').value=t;loadReport()}
+function mark(p){['pToday','pYesterday','p7','p30','pMonth'].forEach(id=>$(id).classList.remove('on'));const f=$('from').value,t=$('to').value;
+ const m={pToday:[today,today],pYesterday:[shift(-1),shift(-1)],p7:[shift(-6),today],p30:[shift(-29),today],pMonth:[today.slice(0,8)+'01',today]};
+ for(const k in m)if(m[k][0]===f&&m[k][1]===t)$(k).classList.add('on')}
+function thumb(id,name){const m=catalog.find(x=>x.id===id);return m?artHtml(m):artSvg('americano')}
+function loadReport(){const seq=++reportSeq,from=$('from').value,to=$('to').value;
+ if(!from||!to||from>to){$('reportContent').classList.add('hidden');$('reportMessage').textContent='กรุณาเลือกช่วงวันที่ให้ถูกต้อง';return}
+ mark();$('reportMessage').textContent='กำลังโหลด…';
+ call('report',[from,to],r=>{if(seq!==reportSeq)return;$('reportContent').classList.remove('hidden');
+  $('reportMessage').textContent=`${from} ถึง ${to} · ยกเลิก ${r.voids} บิล`;
+  $('rRevenue').textContent=baht(r.revenue);$('rCups').textContent=r.cups;$('rOrders').textContent=r.orders;$('rAverage').textContent=baht(r.orders?r.revenue/r.orders:0);
+  const mx=Math.max(1,...r.byDay.map(d=>d.revenue)),best=r.byDay.reduce((a,d)=>d.revenue>a.revenue?d:a,r.byDay[0]);
+  $('chartNote').textContent=best&&best.revenue>0?`วันที่ขายดีที่สุด ${best.date.slice(5).split('-').reverse().join('/')} · ${baht(best.revenue)}`:'ยังไม่มียอดขายในช่วงนี้';
+  $('chart').innerHTML=r.byDay.map(d=>`<div class="bar-col ${best&&d.date===best.date&&d.revenue>0?'best':''}" title="${d.date} ${baht(d.revenue)} · ${d.cups} แก้ว"><span class="v">${d.revenue?baht(d.revenue):''}</span><div class="bar" style="height:${Math.max(2,d.revenue/mx*100)}%"></div><span class="d">${d.date.slice(8)}/${d.date.slice(5,7)}</span></div>`).join('');
+  const top=Math.max(1,...r.products.map(p=>p.qty));
+  $('ranking').innerHTML=r.products.length?r.products.map((p,i)=>`<div class="rank r${i+1}"><span class="num">${i+1}</span><span class="th">${thumb(p.id,p.name)}</span><span class="rname">${esc(p.name)}<div class="bar-bg"><i style="width:${p.qty/top*100}%"></i></div></span><span class="q">${p.qty} แก้ว<small>${baht(p.revenue)}</small></span></div>`).join(''):'<div class="empty">ยังไม่มียอดขายในช่วงนี้</div>';
+  reportOrders=r.recent;
+  $('orders').innerHTML=r.recent.length?r.recent.map((o,i)=>`<div class="order"><div class="order-top"><b>${esc(o.time)} · ${baht(o.total)} ${o.status==='VOID'?'<span class="tag">ยกเลิกแล้ว</span>':''}</b>${o.status==='PAID'?`<button class="void" onclick="openVoid(${i})">ยกเลิกบิล</button>`:''}</div><div class="order-details">${o.cups} แก้ว · ${esc(o.items.map(x=>x.name+' × '+x.qty+(x.sweetness!=='ปกติ'?' ('+x.sweetness+')':'')+(x.note?' ['+x.note+']':'')).join(', '))}${o.reason?' · เหตุผล: '+esc(o.reason):''}</div></div>`).join(''):'<div class="empty">ไม่มีรายการขาย</div>'},
+ e=>{if(seq!==reportSeq)return;$('reportMessage').textContent='โหลดรายงานไม่สำเร็จ: '+error(e)})}
+/* ---------- settings ---------- */
+function renderSettings(){
+ $('pinStatus').className='status '+(pinConfigured?'ok':'no');$('pinStatus').textContent=pinConfigured?'✓ ตั้ง PIN แล้ว':'ยังไม่ได้ตั้ง PIN';
+ $('mailStatus').textContent=summaryEmail?'ส่งไปที่ '+summaryEmail+' (ตั้งไว้ให้อัตโนมัติแล้ว)':'ยังไม่ได้ตั้งอีเมล โหลดหน้าใหม่อีกครั้ง';
+ $('mlist').innerHTML=catalog.map(m=>`<div class="mrow ${m.active?'':'off'}"><span class="th">${artHtml(m)}</span><span><div class="nm">${esc(m.name)}</div><div class="ct">${esc(m.category)} · ${baht(m.price)}${m.active?'':' · ซ่อนอยู่'}</div></span><span class="acts"><button class="secondary" onclick="openMenuEdit('${esc(m.id)}')">แก้ไข</button><button class="${m.active?'danger':'secondary'}" onclick="toggleActive('${esc(m.id)}')">${m.active?'ซ่อน':'แสดง'}</button></span></div>`).join('')}
+function toggleActive(id){const m=catalog.find(x=>x.id===id);if(!m)return;const to=!m.active;
+ call('setMenuActive',[id,to],()=>{m.active=to;if(!to){cart=cart.filter(x=>x.id!==id)}renderSettings();renderMenu();renderCart();toast(to?'แสดงเมนูแล้ว':'ซ่อนเมนูแล้ว')})}
+function openMenuEdit(id){const m=id?catalog.find(x=>x.id===id):null;editId=id;editImage=m?m.image:'';editArt=m?m.art:'americano';
+ $('mTitle').textContent=m?'แก้ไขเมนู':'เพิ่มเมนูใหม่';$('mName').value=m?m.name:'';$('mPrice').value=m?m.price:'';$('mCat').value=m?m.category:(category!=='ทั้งหมด'?category:'');
+ $('catList').innerHTML=[...new Set(catalog.map(x=>x.category))].map(c=>`<option value="${esc(c)}">`).join('');
+ $('mArt').innerHTML=Object.keys(ARTS).map(k=>`<button type="button" data-k="${k}" title="${ART_NAMES[k]}" aria-label="${ART_NAMES[k]}">${artHtml({art:k})}</button>`).join('');
+ paintEdit();$('menuModal').classList.remove('hidden')}
+function paintEdit(){$('mPrev').innerHTML=editImage?`<img src="${editImage}" alt="">`:artHtml({art:editArt});$('mClear').classList.toggle('hidden',!editImage);
+ [...$('mArt').children].forEach(b=>b.classList.toggle('on',!editImage&&b.dataset.k===editArt))}
+$('mArt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;editArt=b.dataset.k;editImage='';paintEdit()});
+function closeMenuEdit(){$('menuModal').classList.add('hidden')}
+function clearPhoto(){editImage='';paintEdit()}
+function pickPhoto(inp){const f=inp.files&&inp.files[0];inp.value='';if(!f)return;if(!/^image\//.test(f.type)){toast('กรุณาเลือกไฟล์รูปภาพ');return}
+ const url=URL.createObjectURL(f),img=new Image();
+ img.onload=()=>{URL.revokeObjectURL(url);
+  const c=document.createElement('canvas'),ctx=c.getContext('2d');
+  let w=360,h=330,q=.82,out='';
+  const ar=img.width/img.height,tar=w/h;let sx=0,sy=0,sw=img.width,sh=img.height;
+  if(ar>tar){sw=img.height*tar;sx=(img.width-sw)/2}else{sh=img.width/tar;sy=(img.height-sh)/2}
+  for(let k=0;k<8;k++){c.width=w;c.height=h;ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,sx,sy,sw,sh,0,0,w,h);out=c.toDataURL('image/jpeg',q);if(out.length<=47000)break;q-=.1;if(q<.4){q=.6;w=Math.round(w*.8);h=Math.round(h*.8)}}
+  if(out.length>47000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
+  editImage=out;paintEdit()};
+ img.onerror=()=>{URL.revokeObjectURL(url);toast('เปิดรูปนี้ไม่ได้ ลองรูปอื่น')};img.src=url}
+function saveMenu(){const name=$('mName').value.trim(),price=Number($('mPrice').value),cat=$('mCat').value.trim();
+ if(!name){toast('กรุณาใส่ชื่อเมนู');return}if($('mPrice').value===''||!isFinite(price)||price<0){toast('กรุณาใส่ราคา');return}
+ $('mSave').disabled=true;$('mSave').textContent='กำลังบันทึก…';
+ call('saveMenuItem',[{id:editId,name:name,price:price,category:cat,image:editImage,art:editArt}],r=>{
+  $('mSave').disabled=false;$('mSave').textContent='บันทึกเมนู';const i=catalog.findIndex(x=>x.id===r.id);
+  if(i>=0){r.active=catalog[i].active;catalog[i]=r;const c=cart.filter(x=>x.id===r.id);c.forEach(x=>{x.name=r.name;x.price=r.price})}else catalog.push(r);
+  closeMenuEdit();renderMenu();renderCart();if(!$('settingsPage').classList.contains('hidden'))renderSettings();toast('✓ บันทึกเมนูแล้ว')},
+ e=>{$('mSave').disabled=false;$('mSave').textContent='บันทึกเมนู';toast(error(e))})}
+/* ---------- photos, motion, saving overlay ---------- */
+const PHOTO_URL={};
+function buildPhotos(){for(const k in PHOTOS){try{const s=PHOTOS[k],b=atob(s.slice(s.indexOf(',')+1)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);PHOTO_URL[k]=URL.createObjectURL(new Blob([u],{type:'image/jpeg'}))}catch(e){PHOTO_URL[k]=PHOTOS[k]}}}
+document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.dataset&&t.dataset.k&&/^blob:/.test(t.src)&&PHOTOS[t.dataset.k])t.src=PHOTOS[t.dataset.k]},true);
+const calm=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+function setMoney(el,to){const from=el._v==null?0:el._v;el._v=to;if(from===to||calm()){el.textContent=baht(to);return}cancelAnimationFrame(el._r);const t0=performance.now(),d=260;const step=t=>{const p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);if(p<1){el.textContent=baht(Math.round(from+(to-from)*e));el._r=requestAnimationFrame(step)}else el.textContent=baht(to)};el._r=requestAnimationFrame(step)}
+let lastCups=-1;
+function bump(el){if(el.animate&&!calm())el.animate([{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:220,easing:'ease-out'})}
+function setCups(n){$('cupCount').textContent=n+' แก้ว';$('previewCount').textContent=n+' แก้ว';if(lastCups>=0&&n!==lastCups){bump($('cupCount'));bump($('previewCount'))}lastCups=n}
+let flying=0;
+function fly(el,m){if(flying>5||calm()||!el.animate)return;flying++;requestAnimationFrame(()=>{try{const a=el.querySelector('.product-art')||el,r=a.getBoundingClientRect(),tg=(innerWidth<=760?$('previewCount'):$('cupCount')).getBoundingClientRect();if(!tg.width){flying--;return}const s=document.createElement('span'),src=photoSrc(m);s.className='fly';if(src)s.style.backgroundImage='url("'+src+'")';document.body.appendChild(s);const x0=r.left+r.width/2-22,y0=r.top+r.height/2-22,x1=tg.left+tg.width/2-22,y1=tg.top+tg.height/2-22;const an=s.animate([{transform:`translate(${x0}px,${y0}px) scale(1)`,opacity:1},{transform:`translate(${x1}px,${y1}px) scale(.3)`,opacity:.5}],{duration:420,easing:'cubic-bezier(.4,0,.7,.2)'});an.onfinish=an.oncancel=()=>{s.remove();flying--}}catch(e){flying--}})}
+let td={rev:0,cups:0,orders:0};
+function paintToday(){$('todayBar').classList.remove('hidden');setMoney($('tdRev'),td.rev);$('tdCups').textContent=td.cups;$('tdOrders').textContent=td.orders}
+function refreshTodayStats(){refreshToday();call('report',[today,today],r=>{td={rev:r.revenue,cups:r.cups,orders:r.orders};paintToday()},()=>{})}
+function addToday(total,cups){td.rev=Math.round((td.rev+total)*100)/100;td.cups+=cups;td.orders++;paintToday()}
+let saveTimer=0;
+function showSaving(state,title,sub){clearTimeout(saveTimer);const o=$('saving');o.dataset.s=state;$('saveTitle').textContent=title;$('saveSub').textContent=sub||'';o.classList.add('show');o.classList.toggle('done',state==='ok');if(state==='ok'){buzz();saveTimer=setTimeout(hideSaving,1400)}}
+function hideSaving(){$('saving').classList.remove('show','done')}
+/* ---------- PIN / void ---------- */
+function openSettings(){$('currentPin').value='';$('newPin').value='';$('confirmPin').value='';$('currentPinWrap').classList.toggle('hidden',!pinConfigured);
+ $('settingsInfo').textContent=pinConfigured?'เปลี่ยน PIN ที่ใช้ยกเลิกบิล':'ตั้ง PIN ก่อนเริ่มใช้การยกเลิกบิล';$('settingsModal').classList.remove('hidden')}
+function closeSettings(){$('settingsModal').classList.add('hidden')}
+function saveSettings(){const old=$('currentPin').value,next=$('newPin').value;
+ if(!/^\d{4,12}$/.test(next)||next!==$('confirmPin').value){toast('PIN ต้องเป็นตัวเลข 4–12 หลักและยืนยันให้ตรงกัน');return}
+ $('savePin').disabled=true;call('setPOSPin',[old,next],()=>{$('savePin').disabled=false;pinConfigured=true;closeSettings();renderSettings();toast('✓ บันทึก PIN แล้ว')},e=>{$('savePin').disabled=false;toast(error(e))})}
+function openVoid(i){voidId=reportOrders[i].id;$('reason').value='';$('pin').value='';$('voidModal').classList.remove('hidden')}
+function closeVoid(){$('voidModal').classList.add('hidden');voidId=''}
+function confirmVoid(){const reason=$('reason').value.trim(),pin=$('pin').value;if(!reason||!pin){toast('กรุณากรอกเหตุผลและ PIN');return}
+ $('voidConfirm').disabled=true;call('voidOrder',[voidId,pin,reason],()=>{$('voidConfirm').disabled=false;closeVoid();toast('ยกเลิกบิลแล้ว');loadReport();refreshTodayStats()},e=>{$('voidConfirm').disabled=false;toast(error(e))})}
+init();
+</script>
