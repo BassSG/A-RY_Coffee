@@ -22,7 +22,8 @@ const POS = Object.freeze({
 
 function doGet() {
   return HtmlService.createTemplateFromFile('Index').evaluate().setTitle('A-RY Coffee POS')
-    .addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover');
+    .addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 /** Used by Index.html to pull in Style and Script. */
 function include(name) { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
