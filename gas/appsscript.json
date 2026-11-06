@@ -9,5 +9,8 @@
     "https://www.googleapis.com/auth/script.send_mail",
     "https://www.googleapis.com/auth/userinfo.email"
   ],
-  "webapp": {"access": "MYSELF", "executeAs": "USER_ACCESSING"}
+  "webapp": {
+    "access": "ANYONE",
+    "executeAs": "USER_DEPLOYING"
+  }
 }
